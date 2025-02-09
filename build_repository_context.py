@@ -102,7 +102,7 @@ class RepositoryProcessor:
                 # Normalize root path
                 root_realpath = os.path.realpath(root)
 
-                # Modify dirs in-place to skip directories
+                # Modify dirs in-place to skip directories based on their full paths
                 dirs[:] = [d for d in dirs if self.should_include_dir(os.path.join(root, d))]
 
                 for file in files:
@@ -142,11 +142,11 @@ class RepositoryProcessor:
             try:
                 contents = sorted([p for p in dir_path.iterdir()
                                    if not self.is_ignored(str(p))
-                                   and self.should_include_dir(str(p), check_full_path=False)])
+                                   and self.should_include_dir(str(p))])  # full-path check
             except PermissionError as e:
                 logging.error(f"Permission error accessing {dir_path}: {e}")
                 return
-            pointers = ['├── '] * (len(contents) - 1) + ['└── '] if contents else []
+            pointers = ['├── '] * (len(contents) - 1) + (['└── '] if contents else [])
             for pointer, path in zip(pointers, contents):
                 yield prefix + pointer + path.name
                 if path.is_dir():
@@ -176,7 +176,7 @@ class RepositoryProcessor:
             # Normalize root path
             root_realpath = os.path.realpath(root)
 
-            # Modify dirs in-place to skip directories
+            # Modify dirs in-place to skip directories based on their full paths
             dirs[:] = [d for d in dirs if self.should_include_dir(os.path.join(root, d))]
 
             for file in files:
@@ -202,12 +202,14 @@ class RepositoryProcessor:
         dir_realpath = os.path.realpath(dir_path)
 
         if check_full_path:
-            if dir_realpath in self.skip_dirs:
-                return False
+            # If the directory is exactly one of the skip directories or is within one, ignore it.
+            for skip_dir in self.skip_dirs:
+                # This check works even if the directory is nested inside a skip directory.
+                if dir_realpath == skip_dir or dir_realpath.startswith(skip_dir + os.sep):
+                    return False
         else:
-            # When the full path is not required, compare directory names
-            dir_name = os.path.basename(dir_realpath)
-            if dir_name in self.directories_to_skip:
+            # When not checking the full path, just compare the directory name.
+            if os.path.basename(dir_realpath) in self.directories_to_skip:
                 return False
 
         return True
@@ -325,10 +327,11 @@ class RepositoryProcessor:
 if __name__ == "__main__":
     try:
         processor = RepositoryProcessor(
-            directory='./',
+            directory='./client',
             output_file='combined_docs.txt',
             gitignore_file='./.gitignore',
-            directories_to_skip=['venv', '.git', 'notes', 'archive'],
+            # You can now include folder paths; for example, to ignore the entire UI components directory:
+            directories_to_skip=['venv', '.git', 'notes', 'archive', './client/src/components/ui'],
             file_types_to_capture=[
                 {'match': '.py', 'match_type': 'endswith'},
                 {'match': '.json', 'match_type': 'endswith'},
