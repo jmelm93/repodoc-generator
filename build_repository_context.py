@@ -330,8 +330,8 @@ if __name__ == "__main__":
             directory='./client',
             output_file='combined_docs.txt',
             gitignore_file='./.gitignore',
-            # You can now include folder paths; for example, to ignore the entire UI components directory:
-            directories_to_skip=['venv', '.git', 'notes', 'archive', './client/src/components/ui'],
+            # Use relative imports for folders to skip
+            directories_to_skip=['venv', '.git', 'notes', 'archive', 'src/components/ui'],
             file_types_to_capture=[
                 {'match': '.py', 'match_type': 'endswith'},
                 {'match': '.json', 'match_type': 'endswith'},
